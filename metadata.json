@@ -1,0 +1,7 @@
+{
+  "name": "Agente de Inteligência de Mercado",
+  "description": "Uma ferramenta poderosa para enriquecer planilhas de empresas. Carregue seu Excel, e a IA buscará descrições e informações institucionais atualizadas usando o Google Search.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
