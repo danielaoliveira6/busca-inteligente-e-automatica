@@ -49,8 +49,11 @@ REGRAS OBRIGATÓRIAS:
         });
 
     } catch (error: any) {
-        console.error("API Error:", error);
-        return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+        console.error("API Error detailed:", error);
+        return new Response(JSON.stringify({
+            error: error.message || 'Internal Server Error',
+            details: error.stack || 'No stack trace'
+        }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         });

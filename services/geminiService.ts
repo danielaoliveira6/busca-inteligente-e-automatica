@@ -13,10 +13,14 @@ export const getCompanyInfo = async (companyName: string, cnpj: string = '') => 
     }
 
     const data = await response.json();
+    if (data.error) {
+      return { text: `Erro técnico: ${data.error}`, sources: [] };
+    }
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao buscar informações da empresa:", error);
-    return { text: "Erro ao processar busca. Tente novamente mais tarde.", sources: [] };
+    return { text: `Erro de conexão: ${error.message}`, sources: [] };
   }
 };
+
 
