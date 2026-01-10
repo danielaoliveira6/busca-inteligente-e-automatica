@@ -9,7 +9,15 @@ export default async function handler(req: Request) {
 
     try {
         const { companyName, cnpj, manualApiKey } = await req.json();
-        const apiKey = manualApiKey || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+        let apiKey = manualApiKey || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+        if (apiKey) {
+            apiKey = apiKey.trim();
+            // Caso o usuário cole a linha inteira "CHAVE=valor"
+            if (apiKey.includes('=')) {
+                apiKey = apiKey.split('=').pop()?.trim() || apiKey;
+            }
+        }
 
         // Diagnóstico: Nomes das chaves encontradas (não loga o valor!)
         const envKeys = Object.keys(process.env || {}).filter(k => k.includes('GEMINI') || k.includes('VITE'));
