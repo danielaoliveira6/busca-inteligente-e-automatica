@@ -1,18 +1,18 @@
 
 import React, { useState, useCallback, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { 
-  FileSpreadsheet, 
-  Upload, 
-  Play, 
-  Download, 
-  CheckCircle2, 
-  AlertCircle, 
-  Loader2, 
-  Building2, 
-  Trash2, 
-  ExternalLink, 
-  Sparkles, 
+import {
+  FileSpreadsheet,
+  Upload,
+  Play,
+  Download,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Building2,
+  Trash2,
+  ExternalLink,
+  Sparkles,
   FileUp,
   Globe,
   HelpCircle,
@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [stats, setStats] = useState<ProcessingStats>({ total: 0, processed: 0, errors: 0 });
+  const [manualApiKey, setManualApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isFinished = useMemo(() => {
@@ -47,7 +48,7 @@ const App: React.FC = () => {
     if (lowUrl.includes('gov.br')) return 'Receita/Portal Gov';
     if (lowUrl.includes('linkedin.com')) return 'LinkedIn';
     if (lowUrl.includes('instagram.com')) return 'Instagram';
-    
+
     try {
       const hostname = new URL(url).hostname.replace('www.', '');
       return hostname.charAt(0).toUpperCase() + hostname.slice(1);
@@ -71,18 +72,18 @@ const App: React.FC = () => {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as CompanyRow[];
-      
+
       if (jsonData.length > 0) {
         const fileHeaders = Object.keys(jsonData[0]);
         setHeaders(fileHeaders);
         setData(jsonData.map(row => ({ ...row, __status: 'pending' })));
-        
+
         const nameGuess = fileHeaders.find(h => h.toLowerCase().includes('nome') || h.toLowerCase().includes('empresa') || h.toLowerCase().includes('razão'));
         const cnpjGuess = fileHeaders.find(h => h.toLowerCase().includes('cnpj') || h.toLowerCase().includes('documento'));
-        
+
         setSelectedNameCol(nameGuess || '');
         setSelectedCnpjCol(cnpjGuess || '');
-        
+
         setStats({ total: jsonData.length, processed: 0, errors: 0 });
         setIsProcessing(false);
       }
@@ -93,7 +94,7 @@ const App: React.FC = () => {
 
   const startProcessing = async () => {
     if (!selectedNameCol || isProcessing) return;
-    
+
     setIsProcessing(true);
     setStats(prev => ({ ...prev, processed: 0, errors: 0 }));
 
@@ -110,19 +111,19 @@ const App: React.FC = () => {
       setData([...updatedData]);
 
       try {
-        const result = await getCompanyInfo(String(name), String(cnpj));
-        updatedData[i] = { 
-          ...row, 
-          __description: result.text, 
+        const result = await getCompanyInfo(String(name), String(cnpj), manualApiKey);
+        updatedData[i] = {
+          ...row,
+          __description: result.text,
           __sources: result.sources,
-          __status: 'done' 
+          __status: 'done'
         };
         setStats(prev => ({ ...prev, processed: prev.processed + 1 }));
       } catch (error) {
         updatedData[i] = { ...row, __status: 'error' };
         setStats(prev => ({ ...prev, errors: prev.errors + 1 }));
       }
-      
+
       setData([...updatedData]);
       await new Promise(r => setTimeout(r, 400));
     }
@@ -164,12 +165,12 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen p-4 md:p-8 bg-slate-50 text-slate-900 font-inter">
       <div className="max-w-6xl mx-auto space-y-6">
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          onChange={handleFileUpload} 
-          accept=".xlsx,.xls,.csv" 
-          className="hidden" 
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileUpload}
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
         />
 
         {/* Modal de Ajuda */}
@@ -202,7 +203,7 @@ const App: React.FC = () => {
                   <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold">4</div>
                   <p className="text-sm text-slate-600">Clique em "Iniciar Pesquisa" e aguarde o robô ler a web. Depois, é só baixar o Excel pronto!</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowHelp(false)}
                   className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors"
                 >
@@ -230,11 +231,11 @@ const App: React.FC = () => {
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {data.length > 0 && (
               <>
-                <button 
+                <button
                   onClick={triggerNewUpload}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg transition-all text-sm"
                 >
@@ -242,7 +243,7 @@ const App: React.FC = () => {
                   Novo Arquivo
                 </button>
                 {!isProcessing && (
-                  <button 
+                  <button
                     onClick={resetAll}
                     className="p-2 text-slate-300 hover:text-red-500 transition-colors"
                     title="Limpar tudo"
@@ -252,7 +253,7 @@ const App: React.FC = () => {
                 )}
               </>
             )}
-            <button 
+            <button
               onClick={() => setShowHelp(true)}
               className="p-2 text-slate-400 hover:text-indigo-600 transition-colors md:hidden"
             >
@@ -263,7 +264,7 @@ const App: React.FC = () => {
 
         {data.length === 0 ? (
           /* Empty State */
-          <div 
+          <div
             onClick={triggerNewUpload}
             className="group cursor-pointer bg-white border-2 border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30 transition-all rounded-3xl p-20 flex flex-col items-center justify-center text-center space-y-6"
           >
@@ -289,11 +290,11 @@ const App: React.FC = () => {
                     <Sparkles size={14} className="text-amber-500" />
                     Configuração
                   </h2>
-                  
+
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1.5">Coluna da Empresa</label>
-                    <select 
-                      value={selectedNameCol} 
+                    <select
+                      value={selectedNameCol}
                       onChange={(e) => setSelectedNameCol(e.target.value)}
                       disabled={isProcessing}
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50 font-medium text-sm"
@@ -305,8 +306,8 @@ const App: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1.5">Coluna do CNPJ (Opcional)</label>
-                    <select 
-                      value={selectedCnpjCol} 
+                    <select
+                      value={selectedCnpjCol}
                       onChange={(e) => setSelectedCnpjCol(e.target.value)}
                       disabled={isProcessing}
                       className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50 font-medium text-sm"
@@ -315,11 +316,28 @@ const App: React.FC = () => {
                       {headers.map(h => <option key={h} value={h}>{h}</option>)}
                     </select>
                   </div>
+
+                  <div className="pt-2">
+                    <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center justify-between">
+                      Chave API Gemini (Opcional)
+                      <span className="text-[9px] text-indigo-400 font-normal">Prioridade sobre Vercel</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={manualApiKey}
+                      onChange={(e) => {
+                        setManualApiKey(e.target.value);
+                        localStorage.setItem('gemini_api_key', e.target.value);
+                      }}
+                      placeholder="Cole sua chave aqui se der erro 500"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-xs"
+                    />
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-slate-100">
                   {!isFinished ? (
-                    <button 
+                    <button
                       onClick={startProcessing}
                       disabled={!selectedNameCol || isProcessing}
                       className="w-full flex items-center justify-center gap-3 py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-100 active:scale-[0.98]"
@@ -342,7 +360,7 @@ const App: React.FC = () => {
                         <CheckCircle2 className="text-emerald-500" size={20} />
                         <span className="text-emerald-800 font-bold text-xs uppercase tracking-tight">Pesquisa Finalizada!</span>
                       </div>
-                      <button 
+                      <button
                         onClick={downloadResults}
                         className="w-full flex items-center justify-center gap-3 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-100 active:scale-[0.98]"
                       >
@@ -360,7 +378,7 @@ const App: React.FC = () => {
                       <span className="text-xs font-bold text-slate-900">{Math.round(((stats.processed + stats.errors) / stats.total) * 100)}%</span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full transition-all duration-500 ${isFinished ? 'bg-emerald-500' : 'bg-indigo-600'}`}
                         style={{ width: `${((stats.processed + stats.errors) / stats.total) * 100}%` }}
                       />
@@ -423,10 +441,10 @@ const App: React.FC = () => {
                                 {row.__sources && row.__sources.length > 0 && (
                                   <div className="flex flex-wrap gap-1.5 pt-1">
                                     {row.__sources.slice(0, 3).map((src, i) => (
-                                      <a 
-                                        key={i} 
-                                        href={src} 
-                                        target="_blank" 
+                                      <a
+                                        key={i}
+                                        href={src}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="inline-flex items-center gap-1.5 text-[9px] bg-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded border border-slate-200 hover:border-indigo-200 transition-all font-bold"
                                       >

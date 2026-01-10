@@ -8,11 +8,12 @@ export default async function handler(req: Request) {
     }
 
     try {
-        const { companyName, cnpj } = await req.json();
-        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+        const { companyName, cnpj, manualApiKey } = await req.json();
+        const apiKey = manualApiKey || process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
         // Diagnóstico: Nomes das chaves encontradas (não loga o valor!)
         const envKeys = Object.keys(process.env || {}).filter(k => k.includes('GEMINI') || k.includes('VITE'));
+        if (manualApiKey) envKeys.push('MANUAL_API_KEY');
         console.log('Vercel Env:', process.env.VERCEL_ENV || 'desconhecido');
         console.log('Variáveis visíveis:', envKeys);
 

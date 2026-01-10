@@ -1,11 +1,11 @@
-export const getCompanyInfo = async (companyName: string, cnpj: string = '') => {
+export const getCompanyInfo = async (companyName: string, cnpj: string = '', manualApiKey: string = '') => {
   try {
     const response = await fetch('/api/search', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ companyName, cnpj }),
+      body: JSON.stringify({ companyName, cnpj, manualApiKey }),
     });
 
     if (!response.ok) {
