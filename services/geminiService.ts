@@ -9,7 +9,17 @@ export const getCompanyInfo = async (companyName: string, cnpj: string = '') => 
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
+      console.error("DEBUG - Erro do servidor (Raw):", text);
+      let errorMessage = `Erro do servidor (${response.status})`;
+      try {
+        const errorData = JSON.parse(text);
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Fallback para o texto bruto se não for JSON, mas cortado se for muito longo
+        errorMessage = text.slice(0, 100) || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();

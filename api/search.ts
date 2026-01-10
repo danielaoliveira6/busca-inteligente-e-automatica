@@ -1,20 +1,25 @@
-import { GoogleGenAI } from "@google/genai";
+export const config = {
+    runtime: 'edge',
+};
 
-export default async function handler(req, res) {
+export default async function handler(req: Request) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
     }
 
     try {
-        const { companyName, cnpj } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY;
+        const { companyName, cnpj } = await req.json();
+        const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
         if (!apiKey) {
-            return res.status(500).json({ error: 'Chave API não configurada no Vercel (GEMINI_API_KEY)' });
+            console.error('Erro de Configuração: GEMINI_API_KEY ou VITE_GEMINI_API_KEY não encontrados.');
+            return new Response(JSON.stringify({
+                error: 'Chave de API não configurada. Verifique as variáveis de ambiente no Vercel (GEMINI_API_KEY).'
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
-
-        const genAI = new GoogleGenAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         const prompt = `Descreva de forma direta a atividade principal da empresa "${companyName}" ${cnpj ? `(identificada pelo CNPJ ${cnpj})` : ''
             }.
@@ -26,18 +31,59 @@ REGRAS OBRIGATÓRIAS:
     4. Foque apenas no setor de atuação e no que ela produz ou oferece.
     5. Responda apenas o texto puro em Português do Brasil.`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
+        const apiResp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                }),
+            }
+        );
 
-        text = text.replace(/\*/g, '').trim();
+        let data: any;
+        const contentType = apiResp.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            data = await apiResp.json();
+        } else {
+            const text = await apiResp.text();
+            console.error('Resposta não-JSON da API do Google:', text);
+            return new Response(JSON.stringify({
+                error: 'Resposta inválida do Google (não-JSON).',
+                details: text
+            }), { status: 502 });
+        }
 
-        return res.status(200).json({ text, sources: [] });
+        if (!apiResp.ok) {
+            console.error('Erro na API do Google:', data);
+            return new Response(JSON.stringify({
+                error: data.error?.message || 'Erro na API do Google',
+                details: data
+            }), {
+                status: apiResp.status,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
 
-    } catch (error) {
-        console.error("Erro na API Search:", error);
-        return res.status(500).json({
-            error: error.message || 'Erro interno no servidor'
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Informação não encontrada.";
+        const cleanText = text.replace(/\*/g, '').trim();
+
+        return new Response(JSON.stringify({ text: cleanText, sources: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+    } catch (error: any) {
+        console.error('Erro interno na API search:', error);
+        return new Response(JSON.stringify({
+            error: 'Erro interno ao processar a busca.',
+            message: error.message
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
         });
     }
 }
