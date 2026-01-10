@@ -11,6 +11,11 @@ export default async function handler(req: Request) {
         const { companyName, cnpj } = await req.json();
         const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
+        // Diagnóstico: Nomes das chaves encontradas (não loga o valor!)
+        const envKeys = Object.keys(process.env || {}).filter(k => k.includes('GEMINI') || k.includes('VITE'));
+        console.log('Vercel Env:', process.env.VERCEL_ENV || 'desconhecido');
+        console.log('Variáveis visíveis:', envKeys);
+
         if (!apiKey) {
             console.error('Erro de Configuração: GEMINI_API_KEY ou VITE_GEMINI_API_KEY não encontrados.');
             return new Response(JSON.stringify({
